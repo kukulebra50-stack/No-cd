@@ -1,0 +1,62 @@
+-- Улучшенный скрипт на полное удаление кулдаунов у всех предметов
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local Activated = true -- Скрипт включен сразу и навсегда
+
+-- Функция тотального сброса задержек для предмета
+local function removeCooldowns(tool)
+	if not tool:IsA("Tool") then return end
+	
+	-- 1. Стандартный кулдаун Roblox (встроенное свойство)
+	tool.Enabled = true
+	
+	-- 2. Очистка любых кастомных атрибутов, которые любят делать разработчики
+	for _, attributeName in ipairs({"Cooldown", "cooldown", "WaitTime", "Delay", "Activated", "IsUsing", "Reloading"}) do
+		if tool:GetAttribute(attributeName) ~= nil then
+			local attrType = type(tool:GetAttribute(attributeName))
+			if attrType == "number" then
+				tool:SetAttribute(attributeName, 0)
+			elseif attrType == "boolean" then
+				tool:SetAttribute(attributeName, false)
+			end
+		end
+	end
+	
+	-- 3. Проверка внутренних значений (Values), если они есть внутри предмета
+	for _, child in ipairs(tool:GetChildren()) do
+		if child:IsA("NumberValue") or child:IsA("IntValue") then
+			if string.find(string.lower(child.Name), "cooldown") or string.find(string.lower(child.Name), "delay") then
+				child.Value = 0
+			end
+		elseif child:IsA("BoolValue") then
+			if child.Name == "Activated" or child.Name == "Used" then
+				child.Value = false
+			end
+		end
+	end
+end
+
+-- Бесконечный цикл проверки (работает каждый кадр игры)
+RunService.Heartbeat:Connect(function()
+	if not Activated then return end
+	
+	-- Проверка предметов в рюкзаке
+	local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+	if backpack then
+		for _, item in ipairs(backpack:GetChildren()) do
+			removeCooldowns(item)
+		end
+	end
+	
+	-- Проверка предмета, который прямо сейчас в руках у персонажа
+	local character = LocalPlayer.Character
+	if character then
+		for _, item in ipairs(character:GetChildren()) do
+			removeCooldowns(item)
+		end
+	end
+end)
+
